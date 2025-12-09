@@ -9,6 +9,7 @@ for (int i = 0; i < lines.Length; i++)
         grid[i, j] = lines[i][j];
     }
 }
+
 var starts = FindStart(grid);
 Console.WriteLine($"Start positions: {string.Join(", ", starts)}");
 
@@ -16,6 +17,15 @@ var answer = BeamTravel(starts, grid);
 
 PrintCharGrid(grid);
 Console.WriteLine($"The number of beam splits is: {answer}");
+
+var startsForPaths = FindStart(grid);
+if (startsForPaths.Count > 0)
+{
+    var startPos = startsForPaths.Pop();
+    grid[startPos.Item1, startPos.Item2] = '|';
+    var totalPaths = MemoizedDFS(grid, startPos, new Dictionary<(int, int), long>());
+    Console.WriteLine($"The number of unique paths is: {totalPaths}");
+}
 
 int BeamTravel(Stack<(int, int)> starts, char[,] grid)
 {
@@ -100,4 +110,62 @@ Stack<(int, int)> FindStart(char[,] grid)
         }
     }
     return new Stack<(int, int)>(); // Return an empty stack if start not found
+}
+
+long MemoizedDFS(char[,] grid, (int, int) pos, Dictionary<(int, int), long> memo)
+{
+    int x = pos.Item1;
+    int y = pos.Item2;
+    if (x == grid.GetLength(0) - 1)
+        return 1;
+    if (memo.TryGetValue(pos, out var cached))
+        return cached;
+    long total = 0;
+    if (grid[x, y] == '|')
+    {
+        int downX = x + 1;
+        int downY = y;
+        if (downX >= 0 && downX < grid.GetLength(0) && downY >= 0 && downY < grid.GetLength(1))
+        {
+            if (grid[downX, downY] == '|')
+            {
+                total += MemoizedDFS(grid, (downX, downY), memo);
+            }
+            else if (grid[downX, downY] == '^')
+            {
+                // Split left
+                int leftX = downX;
+                int leftY = downY - 1;
+                if (leftX >= 0 && leftX < grid.GetLength(0) && leftY >= 0 && leftY < grid.GetLength(1))
+                {
+                    if (grid[leftX, leftY] == '|')
+                    {
+                        total += MemoizedDFS(grid, (leftX, leftY), memo);
+                    }
+                }
+                // Split right
+                int rightX = downX;
+                int rightY = downY + 1;
+                if (rightX >= 0 && rightX < grid.GetLength(0) && rightY >= 0 && rightY < grid.GetLength(1))
+                {
+                    if (grid[rightX, rightY] == '|')
+                    {
+                        total += MemoizedDFS(grid, (rightX, rightY), memo);
+                    }
+                }
+                // No split continue down
+                int downX2 = downX + 1;
+                int downY2 = downY;
+                if (downX2 >= 0 && downX2 < grid.GetLength(0) && downY2 >= 0 && downY2 < grid.GetLength(1))
+                {
+                    if (grid[downX2, downY2] == '|')
+                    {
+                        total += MemoizedDFS(grid, (downX2, downY2), memo);
+                    }
+                }
+            }
+        }
+    }
+    memo[pos] = total;
+    return total;
 }
